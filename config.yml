@@ -1,0 +1,95 @@
+account:
+  starting_equity: 1000.0
+  max_positions: 5
+  per_trade_risk_pct: 1.0  # 1% of equity per trade
+  daily_drawdown_pct: 3.0  # 3% daily loss breaker
+  correlation_limit: 1     # Max one index-heavy position
+
+strategies:
+  iron_condor:
+    enabled: true
+    universe: ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "NFLX"]
+    iv_lookback: 20
+    delta_short: 15  # ~15-20 delta for shorts
+    delta_long: 10
+    spread_width: 1.0
+    min_credit: 0.20
+    max_credit: 0.40
+    profit_target: 0.5  # 50% of credit
+    max_loss_multiplier: 1.3  # 1.3x credit received
+    max_dte: 2  # 1-2 day holds
+    
+  momentum_vertical:
+    enabled: true
+    universe: ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
+    spread_width: 1.0
+    max_debit: 0.75  # Increased from 0.35
+    profit_target: 0.6  # Reduced from 0.8 for faster exits
+    breakout_lookback: 10  # Reduced from 20 for more sensitivity
+    volume_threshold: 500000  # Reduced from 1M
+    
+  fractional_breakout:
+    enabled: true
+    universe: ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "NFLX"]
+    position_size_usd: 50  # Increased from 30
+    atr_window: 10  # Reduced from 14 for quicker response
+    atr_stop_multiplier: 0.8  # Tighter stops from 1.0
+    atr_target_multiplier: 1.6  # Reduced from 2.0 for faster exits
+    breakout_lookback: 15  # Reduced from 20
+    min_volume: 300000  # Reduced from 500K
+    
+  etf_momentum:
+    enabled: true
+    universe: ["QQQ", "SPY", "TQQQ"]
+    position_size_usd: 100  # Larger positions for ETFs
+    momentum_lookback: 20
+    volatility_lookback: 14
+    rsi_period: 14
+    rsi_oversold: 30
+    rsi_overbought: 70
+    min_volume: 1000000  # Higher volume for ETFs
+    max_hold_days: 10
+    max_drawdown_pct: 3.0
+    profit_target_pct: 5.0
+    stop_loss_pct: 2.0
+
+assets:
+  min_volume: 100000
+  max_bid_ask_spread_pct: 2.0  # 2% max spread
+  options_min_volume: 50
+  options_max_bid_ask_spread: 0.10  # $0.10 max spread
+
+slippage:
+  equity_bps: 5  # 5 basis points
+  options_cents: 0.02  # 2 cents
+  options_pct: 1.0  # 1% of mid
+
+fees:
+  equity_per_share: 0.0  # Commission-free
+  options_per_contract: 0.65
+  regulatory_fee_pct: 0.0001
+
+scheduling:
+  market_open: "09:30"
+  entry_time: "09:35"
+  monitor_start: "10:00"
+  monitor_end: "15:45"
+  cleanup_time: "15:50"
+  
+notifications:
+  enabled: false
+  webhook_url: null
+  notify_on:
+    - fills
+    - rejections
+    - breaker_triggered
+    - daily_summary
+
+backtest:
+  start_date: "2025-01-01"
+  end_date: "2025-08-10"  # Recent period test
+  initial_capital: 1000.0
+  commission_equity: 0.0
+  commission_options: 0.65
+  slippage_equity_bps: 5
+  slippage_options_pct: 1.0
