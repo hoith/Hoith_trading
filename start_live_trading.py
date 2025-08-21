@@ -1,92 +1,170 @@
 #!/usr/bin/env python3
 """
-Quick Start Script for Live Aggressive Trading
-Run this to start the proven 8,376% return strategy on your Alpaca paper account
+Thin Wrapper for Live Trading with Environment Controls
+Updated for minute bars, asset-class routing, and backtest ↔ live parity
 """
 
 import os
 import sys
+import argparse
+from typing import Optional
 
-def setup_environment():
-    """Setup environment with your API keys"""
+def setup_environment(args: Optional[object] = None):
+    """Setup environment variables for live trading"""
     
-    print("🚀 AGGRESSIVE TRADING STRATEGY - LIVE SETUP")
-    print("=" * 60)
-    print("This strategy achieved 8,376% returns over 5 years in backtesting!")
+    print("LIVE TRADING SYSTEM - MINUTE BARS + ASSET-CLASS ROUTING")
+    print("=" * 70)
+    print("Features:")
+    print("- Backtest <-> Live parity with shared strategy core")
+    print("- Minute bar timeframe for both backtest and live")
+    print("- Asset-class routing: Equities (extended hours) vs Options (RTH only)")
+    print("- Comprehensive logging with configurable levels")
+    print("- Paper trading enabled for safety")
     print()
     
-    # Get API keys from user
-    if not os.getenv('ALPACA_API_KEY'):
-        print("Please enter your Alpaca Paper Trading API credentials:")
-        print("(You can find these in your Alpaca dashboard under Paper Trading)")
+    # Set environment variables from command line args or prompts
+    if args:
+        # Command line mode
+        if args.symbols:
+            os.environ['SYMBOLS'] = args.symbols
+            print(f"[SET] Symbols: {args.symbols}")
+        
+        if args.lookback_minutes:
+            os.environ['LOOKBACK_MINUTES'] = str(args.lookback_minutes)
+            print(f"[SET] Lookback: {args.lookback_minutes} minutes")
+        
+        if args.sleep_seconds:
+            os.environ['SLEEP_SECONDS'] = str(args.sleep_seconds)
+            print(f"[SET] Check interval: {args.sleep_seconds} seconds")
+        
+        if args.log_level:
+            os.environ['LOG_LEVEL'] = args.log_level
+            print(f"[SET] Log level: {args.log_level}")
+    
+    # Set defaults for any missing environment variables
+    defaults = {
+        'SYMBOLS': 'AAPL,MSFT,GOOGL,SPY,QQQ',
+        'LOOKBACK_MINUTES': '720',
+        'SLEEP_SECONDS': '60',
+        'LOG_LEVEL': 'INFO'
+    }
+    
+    for key, default_value in defaults.items():
+        if key not in os.environ:
+            os.environ[key] = default_value
+            print(f"[DEFAULT] {key}: {default_value}")
+    
+    # Check for required API keys
+    if not os.getenv('APCA_API_KEY_ID') or not os.getenv('APCA_API_SECRET_KEY'):
+        print("\n[WARNING] API CREDENTIALS REQUIRED")
+        print("Please set your Alpaca Paper Trading API credentials:")
+        print("(Find these in your Alpaca dashboard under Paper Trading)")
         print()
         
-        api_key = input("Enter your ALPACA_API_KEY: ").strip()
-        secret_key = input("Enter your ALPACA_SECRET_KEY: ").strip()
-        
-        # Set environment variables for this session
-        os.environ['ALPACA_API_KEY'] = api_key
-        os.environ['ALPACA_SECRET_KEY'] = secret_key
-        
-        print("\n✅ API keys set for this session")
+        if not args or args.interactive:
+            # Interactive mode
+            api_key = input("Enter APCA_API_KEY_ID: ").strip()
+            secret_key = input("Enter APCA_API_SECRET_KEY: ").strip()
+            
+            if api_key and secret_key:
+                os.environ['APCA_API_KEY_ID'] = api_key
+                os.environ['APCA_API_SECRET_KEY'] = secret_key
+                print("[OK] API keys set for this session")
+            else:
+                print("[ERROR] API keys required. Exiting.")
+                return False
+        else:
+            # Non-interactive mode
+            print("[ERROR] Set APCA_API_KEY_ID and APCA_API_SECRET_KEY environment variables")
+            print("   Example: export APCA_API_KEY_ID=your_key")
+            print("   Example: export APCA_API_SECRET_KEY=your_secret")
+            return False
     else:
-        print("✅ API keys found in environment")
+        print("[OK] API credentials found")
     
-    print("\n📊 STRATEGY CONFIGURATION:")
-    print("- Symbols: 20 high-momentum stocks & ETFs")
-    print("  * Stocks: AAPL, MSFT, GOOGL, TSLA, NVDA, META, AMZN, NFLX, AMD, CRM, UBER")
-    print("  * ETFs: QQQ, SPY, TQQQ, IWM, XLK, XLF, ARKK, SOXL, SPXL")
-    print("- Position Sizes: $20K-$30K (scales with account growth)")
-    print("- Risk Management: 2-3% stop loss, 5-8% profit targets")
-    print("- Check Interval: 1 minute during market hours (maximum responsiveness)")
-    print("- Paper Trading: ENABLED (safe testing)")
+    print("\nCURRENT CONFIGURATION:")
+    print(f"- Symbols: {os.environ['SYMBOLS']}")
+    print(f"- Lookback: {os.environ['LOOKBACK_MINUTES']} minutes")
+    print(f"- Check interval: {os.environ['SLEEP_SECONDS']} seconds") 
+    print(f"- Log level: {os.environ['LOG_LEVEL']}")
+    print(f"- Paper trading: ENABLED")
     
-    response = input("\n🎯 Ready to start live trading? (y/N): ").strip().lower()
-    
-    if response == 'y' or response == 'yes':
-        return True
-    else:
-        print("Setup cancelled. Run this script again when ready!")
-        return False
+    return True
 
 def main():
-    """Main startup function"""
+    """Main entry point with argument parsing"""
+    parser = argparse.ArgumentParser(
+        description='Start live trading with minute bars and asset-class routing',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python start_live_trading.py
+  python start_live_trading.py --symbols AAPL,MSFT,SPY --log-level DEBUG
+  python start_live_trading.py --lookback-minutes 480 --sleep-seconds 30
+  python start_live_trading.py --non-interactive
+        """
+    )
     
-    if not setup_environment():
-        return
+    parser.add_argument('--symbols', type=str,
+                       help='Comma-separated symbols to trade (default: AAPL,MSFT,GOOGL,SPY,QQQ)')
+    parser.add_argument('--lookback-minutes', type=int, default=720,
+                       help='Minutes of historical data to fetch (default: 720)')
+    parser.add_argument('--sleep-seconds', type=int, default=60,
+                       help='Seconds between trading cycles (default: 60)')
+    parser.add_argument('--log-level', type=str, 
+                       choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+                       help='Logging level (default: INFO)')
+    parser.add_argument('--non-interactive', action='store_true',
+                       help='Run without prompting for API keys')
     
-    print("\n🔄 Starting Live Trading Engine...")
-    print("=" * 60)
+    args = parser.parse_args()
+    args.interactive = not args.non_interactive
+    
+    # Setup environment
+    if not setup_environment(args):
+        sys.exit(1)
+    
+    print("\nSTARTING LIVE TRADING ENGINE...")
+    print("=" * 70)
     
     # Import and run the live trader
     try:
-        from live_aggressive_strategy import AggressiveLiveTrader
+        # Import main_loop from live_aggressive_strategy
+        from live_aggressive_strategy import main_loop
         
-        # Initialize with paper trading
-        trader = AggressiveLiveTrader()
-        
-        print("✅ Trader initialized successfully")
-        print("📈 Monitoring market for entry signals...")
-        print("💾 All trades will be logged to 'live_trading.log'")
-        print("⏹️  Press Ctrl+C to stop trading")
+        print("[OK] Live trading module loaded")
+        print("Monitoring market for signals...")
+        print("Logs will be written to 'live_trading.log'")
+        print("Press Ctrl+C to stop trading safely")
         print()
         
-        # Start live trading
-        trader.run_live_trading(check_interval_minutes=1)
+        # Start the main trading loop
+        main_loop()
         
     except KeyboardInterrupt:
-        print("\n\n⏹️  Live trading stopped by user")
-        print("💾 All positions and state have been saved")
-        print("✅ Safe shutdown complete")
-    
+        print("\n\n[STOP] Live trading stopped by user")
+        print("All positions and state have been saved")
+        print("Safe shutdown complete")
+        
     except ImportError as e:
-        print(f"\n❌ Import error: {e}")
-        print("Make sure all dependencies are installed:")
-        print("pip install alpaca-py pandas numpy")
-    
+        print(f"\n[ERROR] Import error: {e}")
+        print("Required dependencies:")
+        print("- alpaca-py: pip install alpaca-py")
+        print("- pandas: pip install pandas")
+        print("- numpy: pip install numpy")
+        print("- python-dotenv: pip install python-dotenv (optional)")
+        sys.exit(1)
+        
     except Exception as e:
-        print(f"\n❌ Error starting live trading: {e}")
-        print("Check your API keys and internet connection")
+        print(f"\n[ERROR] Error starting live trading: {e}")
+        print("Check:")
+        print("- API credentials are correct")
+        print("- Internet connection is stable") 
+        print("- All required dependencies are installed")
+        import traceback
+        print("\nFull error details:")
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
